@@ -1,4 +1,4 @@
-import React, { useState, Component } from "react";
+import React, { Component } from "react";
 import {
   Card,
   CardBody,
@@ -19,49 +19,83 @@ import {
 } from "reactstrap";
 import { Link } from "react-router-dom";
 import { Control, LocalForm, Errors } from "react-redux-form";
+import { Loading } from "./LoadingComponent";
+import { baseUrl } from "../shared/baseUrl";
+import { FadeTransform, Fade, Stagger } from "react-animation-components";
 
 function RenderDish({ dish }) {
   if (dish != null) {
     return (
-      <Card>
-        <CardImg width="50%" object src={dish.image} alt={dish.name} />
+      <FadeTransform
+        in
+        transformProps={{
+          exitTransform: "scale(0.5) translateY(-50%)",
+        }}
+      >
+        <Card>
+          <CardImg
+            width="50%"
+            object
+            src={baseUrl + dish.image}
+            alt={dish.name}
+          />
 
-        <CardBody>
-          <CardTitle>{dish.name}</CardTitle>
-          <CardText>{dish.description}</CardText>
-        </CardBody>
-      </Card>
+          <CardBody>
+            <CardTitle>{dish.name}</CardTitle>
+            <CardText>{dish.description}</CardText>
+          </CardBody>
+        </Card>
+      </FadeTransform>
     );
   } else {
     return <div></div>;
   }
 }
-function RenderComment({ comments }) {
+function RenderComment({ comments, postComment, dishId }) {
   var commentList = comments.map((element) => (
     <div key={element.id}>
-      <ListGroup>
-        <ListGroupItem>--{element.comment}</ListGroupItem>
-        <ListGroupItem>
-          author:{element.author},
-          {new Intl.DateTimeFormat("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-          }).format(new Date(Date.parse(element.date)))}
-        </ListGroupItem>
+      <ListGroup flush>
+        <Fade in>
+          <ListGroupItem>
+            --{element.comment}
+            <br />
+            author:{element.author},
+            {new Intl.DateTimeFormat("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+            }).format(new Date(Date.parse(element.date)))}
+          </ListGroupItem>
+        </Fade>
       </ListGroup>
     </div>
   ));
   return (
     <div>
       {commentList}
-      <CommentForm />
+      <CommentForm dishId={dishId} postComment={postComment} />
     </div>
   );
 }
 
 const DishDetail = (props) => {
-  if (props.dish != null) {
+  if (props.isLoading) {
+    return (
+      <div className="container">
+        <div className="row">
+          <Loading />
+        </div>
+      </div>
+    );
+  } else if (props.errMess) {
+    return (
+      <div className="container">
+        <div className="row">
+          <h4>{props.errMess}</h4>
+        </div>
+      </div>
+    );
+  } else if (props.dish != null) {
     return (
       <div className="container">
         <div className="row">
@@ -85,7 +119,13 @@ const DishDetail = (props) => {
               <CardTitle>Comments:</CardTitle>
               <CardBody>
                 <CardText>
-                  <RenderComment comments={props.comments} />
+                  <Stagger in>
+                    <RenderComment
+                      comments={props.comments}
+                      postComment={props.postComment}
+                      dishId={props.dish.id}
+                    />
+                  </Stagger>
                 </CardText>
               </CardBody>
             </Card>
@@ -122,8 +162,12 @@ export class CommentForm extends Component {
 
   handleSubmit(values) {
     this.toggleModal();
-    console.log("Current State is: " + JSON.stringify(values));
-    alert("Current State is: " + JSON.stringify(values));
+    this.props.postComment(
+      this.props.dishId,
+      values.rating,
+      values.author,
+      values.comment
+    );
   }
 
   render() {
